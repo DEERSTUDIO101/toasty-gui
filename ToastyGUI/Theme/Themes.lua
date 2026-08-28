@@ -1,0 +1,73 @@
+-- ToastyGUI/Theme/Themes.lua
+local Themes = {}
+
+Themes.Glass = {
+    name = "Glass",
+    bg = Color3.fromHex("0a0a0f"),
+    bgGradientEnd = Color3.fromHex("12121a"),
+    panelBg = Color3.fromHex("ffffff"),
+    panelBgTransparency = 0.85,
+    panelBorder = Color3.fromHex("ffffff"),
+    panelBorderTransparency = 0.88,
+    blurSize = 20,
+    accent = Color3.fromHex("00d4ff"),
+    textPrimary = Color3.fromHex("ffffff"),
+    textSecondary = Color3.fromHex("a0a0b0"),
+    buttonPrimaryBg = Color3.fromHex("00d4ff"),
+    buttonPrimaryText = Color3.fromHex("0a0a0f"),
+    buttonSecondaryBg = Color3.fromHex("ffffff"),
+    buttonSecondaryTransparency = 0.9,
+    buttonGhostText = Color3.fromHex("a0a0b0"),
+    badgeAd = Color3.fromHex("f59e0b"),
+    badgePremium = Color3.fromHex("a855f7"),
+    cardBg = Color3.fromHex("ffffff"),
+    cardBgTransparency = 0.88,
+}
+
+Themes.Dark = {
+    name = "Dark",
+    bg = Color3.fromHex("0d0d1a"),
+    bgGradientEnd = Color3.fromHex("0d0d1a"),
+    panelBg = Color3.fromHex("1a1a2e"),
+    panelBgTransparency = 0,
+    panelBorder = Color3.fromHex("2a2a3e"),
+    panelBorderTransparency = 0,
+    blurSize = 0,
+    accent = Color3.fromHex("00d4ff"),
+    textPrimary = Color3.fromHex("ffffff"),
+    textSecondary = Color3.fromHex("8888a0"),
+    buttonPrimaryBg = Color3.fromHex("00d4ff"),
+    buttonPrimaryText = Color3.fromHex("0d0d1a"),
+    buttonSecondaryBg = Color3.fromHex("2a2a3e"),
+    buttonSecondaryTransparency = 0,
+    buttonGhostText = Color3.fromHex("8888a0"),
+    badgeAd = Color3.fromHex("d97706"),
+    badgePremium = Color3.fromHex("9333ea"),
+    cardBg = Color3.fromHex("1a1a2e"),
+    cardBgTransparency = 0,
+}
+
+Themes.Flat = {
+    name = "Flat",
+    bg = Color3.fromHex("f5f5f5"),
+    bgGradientEnd = Color3.fromHex("f5f5f5"),
+    panelBg = Color3.fromHex("ffffff"),
+    panelBgTransparency = 0,
+    panelBorder = Color3.fromHex("e5e5e5"),
+    panelBorderTransparency = 0,
+    blurSize = 0,
+    accent = Color3.fromHex("6366f1"),
+    textPrimary = Color3.fromHex("1a1a1a"),
+    textSecondary = Color3.fromHex("6b7280"),
+    buttonPrimaryBg = Color3.fromHex("6366f1"),
+    buttonPrimaryText = Color3.fromHex("ffffff"),
+    buttonSecondaryBg = Color3.fromHex("e5e7eb"),
+    buttonSecondaryTransparency = 0,
+    buttonGhostText = Color3.fromHex("6b7280"),
+    badgeAd = Color3.fromHex("f59e0b"),
+    badgePremium = Color3.fromHex("8b5cf6"),
+    cardBg = Color3.fromHex("ffffff"),
+    cardBgTransparency = 0,
+}
+
+return Themes
