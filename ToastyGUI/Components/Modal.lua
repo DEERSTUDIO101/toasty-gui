@@ -43,11 +43,6 @@ function Modal.new(parent, theme)
     stroke.Parent = frame
 
     local blurEffect = nil
-    if theme.blurSize > 0 then
-        blurEffect = Instance.new("BlurEffect")
-        blurEffect.Size = theme.blurSize
-        blurEffect.Parent = game:GetService("Lighting")
-    end
 
     local padding = Instance.new("UIPadding")
     padding.PaddingTop = UDim.new(0, 20)
@@ -149,13 +144,10 @@ function Modal.new(parent, theme)
         _checkBtn = checkBtn,
     }
 
-    -- Key validation state (updated by open(), read by the persistent connection below)
-    local keyValid = false
     checkBtn.MouseButton1Up:Connect(function()
         local key = keyInput.getValue()
         if #key >= 6 then
             -- Backend will handle real validation
-            keyValid = true
             executeSlot.Visible = true
         end
     end)
@@ -182,6 +174,13 @@ function Modal.new(parent, theme)
     backdrop.MouseButton1Click:Connect(doClose)
 
     function self.open(data, isLoggedIn)
+        if blurEffect then blurEffect:Destroy() end
+        if theme.blurSize > 0 then
+            blurEffect = Instance.new("BlurEffect")
+            blurEffect.Size = theme.blurSize
+            blurEffect.Parent = game:GetService("Lighting")
+        end
+
         -- Clear badge slot children
         for _, c in ipairs(badgeSlot:GetChildren()) do c:Destroy() end
         for _, c in ipairs(linkBtnSlot:GetChildren()) do c:Destroy() end
@@ -202,7 +201,6 @@ function Modal.new(parent, theme)
             end)
         end
 
-        keyValid = false
         executeSlot.Visible = false
         keyInput.setValue("")
 
