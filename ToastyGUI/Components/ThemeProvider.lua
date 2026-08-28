@@ -12,6 +12,7 @@ function ThemeProvider.loadSaved()
         ThemeProvider._current = Themes[data]
         return data
     end
+    ThemeProvider._current = Themes.Glass
     return "Glass"
 end
 
