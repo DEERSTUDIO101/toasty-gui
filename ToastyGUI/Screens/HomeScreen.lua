@@ -36,10 +36,10 @@ function HomeScreen.new(parent, theme, user, scripts, onSelect, onNavSelect, isM
     content.BackgroundTransparency = 1
     content.Parent = frame
 
-    local contentLayout = Instance.new("UIListLayout")
-    contentLayout.FillDirection = Enum.FillDirection.Vertical
-    contentLayout.Padding = UDim.new(0, 0)
-    contentLayout.Parent = content
+    local _contentLayout = Instance.new("UIListLayout")
+    _contentLayout.FillDirection = Enum.FillDirection.Vertical
+    _contentLayout.Padding = UDim.new(0, 0)
+    _contentLayout.Parent = content
 
     -- Header bar
     local header = Instance.new("Frame")
@@ -74,10 +74,10 @@ function HomeScreen.new(parent, theme, user, scripts, onSelect, onNavSelect, isM
     avatarHolder.Position = UDim2.new(0.5, 0, 0, 0)
     avatarHolder.BackgroundTransparency = 1
     avatarHolder.Parent = header
-    local avatarLayout = Instance.new("UIListLayout")
-    avatarLayout.HorizontalAlignment = Enum.HorizontalAlignment.Right
-    avatarLayout.VerticalAlignment = Enum.VerticalAlignment.Center
-    avatarLayout.Parent = avatarHolder
+    local _avatarLayout = Instance.new("UIListLayout")
+    _avatarLayout.HorizontalAlignment = Enum.HorizontalAlignment.Right
+    _avatarLayout.VerticalAlignment = Enum.VerticalAlignment.Center
+    _avatarLayout.Parent = avatarHolder
     Avatar.new(avatarHolder, user and user.username or nil, theme)
 
     -- Scrollable card grid

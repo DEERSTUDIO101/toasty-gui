@@ -1,6 +1,5 @@
 -- ToastyGUI/Main.lua
 local CoreGui = game:GetService("CoreGui")
-local GuiService = game:GetService("GuiService")
 
 local ThemeProvider = require(script.Parent.Components.ThemeProvider)
 local LoginScreen = require(script.Parent.Screens.LoginScreen)
@@ -40,38 +39,42 @@ sg.ResetOnSpawn = false
 sg.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 sg.Parent = CoreGui
 
--- Background
+-- Background (properties populated by rebuildBackground)
 local bg = Instance.new("Frame")
 bg.Size = UDim2.new(1, 0, 1, 0)
-bg.BackgroundColor3 = ThemeProvider.getTheme().bg
 bg.BorderSizePixel = 0
 bg.Parent = sg
 
 local bgGrad = Instance.new("UIGradient")
-bgGrad.Color = ColorSequence.new({
-    ColorSequenceKeypoint.new(0, ThemeProvider.getTheme().bg),
-    ColorSequenceKeypoint.new(1, ThemeProvider.getTheme().bgGradientEnd),
-})
 bgGrad.Rotation = 135
 bgGrad.Parent = bg
 
--- Blur background orbs (Glassmorphism only)
-local function addGlassOrbs()
+local function rebuildBackground()
     local theme = ThemeProvider.getTheme()
-    if theme.blurSize == 0 then return end
-    for _, pos in ipairs({UDim2.new(0.2, 0, 0.2, 0), UDim2.new(0.8, 0, 0.7, 0)}) do
-        local orb = Instance.new("Frame")
-        orb.Size = UDim2.new(0, 300, 0, 300)
-        orb.Position = pos
-        orb.AnchorPoint = Vector2.new(0.5, 0.5)
-        orb.BackgroundColor3 = theme.accent
-        orb.BackgroundTransparency = 0.85
-        orb.BorderSizePixel = 0
-        Instance.new("UICorner", orb).CornerRadius = UDim.new(1, 0)
-        orb.Parent = bg
+    -- Remove old orbs (children of bg that are Frame instances)
+    for _, child in ipairs(bg:GetChildren()) do
+        if child:IsA("Frame") then child:Destroy() end
+    end
+    bg.BackgroundColor3 = theme.bg
+    bgGrad.Color = ColorSequence.new({
+        ColorSequenceKeypoint.new(0, theme.bg),
+        ColorSequenceKeypoint.new(1, theme.bgGradientEnd),
+    })
+    if theme.blurSize > 0 then
+        for _, pos in ipairs({UDim2.new(0.2, 0, 0.2, 0), UDim2.new(0.8, 0, 0.7, 0)}) do
+            local orb = Instance.new("Frame")
+            orb.Size = UDim2.new(0, 300, 0, 300)
+            orb.Position = pos
+            orb.AnchorPoint = Vector2.new(0.5, 0.5)
+            orb.BackgroundColor3 = theme.accent
+            orb.BackgroundTransparency = 0.85
+            orb.BorderSizePixel = 0
+            Instance.new("UICorner", orb).CornerRadius = UDim.new(1, 0)
+            orb.Parent = bg
+        end
     end
 end
-addGlassOrbs()
+rebuildBackground()
 
 -- Screen container
 local screenContainer = Instance.new("Frame")
@@ -86,6 +89,10 @@ local function clearScreen()
     if activeScreenFrame then
         activeScreenFrame:Destroy()
         activeScreenFrame = nil
+    end
+    if modal then
+        modal.frame:Destroy()
+        modal = nil
     end
 end
 
@@ -148,7 +155,7 @@ local function showSettings()
 
     SettingsScreen.new(contentFrame, theme, ThemeProvider.getTheme().name, function(themeName)
         ThemeProvider.setTheme(themeName)
-        modal = nil
+        rebuildBackground()
         showSettings()
     end)
 end

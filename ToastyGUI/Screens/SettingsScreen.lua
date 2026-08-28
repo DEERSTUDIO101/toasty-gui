@@ -1,6 +1,4 @@
 -- ToastyGUI/Screens/SettingsScreen.lua
-local Button = require(script.Parent.Parent.Components.Button)
-
 local SettingsScreen = {}
 
 local THEME_OPTIONS = {
