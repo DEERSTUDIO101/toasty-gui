@@ -42,12 +42,11 @@ function Modal.new(parent, theme)
     stroke.Thickness = 1
     stroke.Parent = frame
 
+    local blurEffect = nil
     if theme.blurSize > 0 then
-        local blur = Instance.new("BlurEffect")
-        blur.Size = theme.blurSize
-        blur.Parent = game:GetService("Lighting")
-        -- store ref to remove on close
-        frame:SetAttribute("blurRef", true)
+        blurEffect = Instance.new("BlurEffect")
+        blurEffect.Size = theme.blurSize
+        blurEffect.Parent = game:GetService("Lighting")
     end
 
     local padding = Instance.new("UIPadding")
@@ -150,6 +149,17 @@ function Modal.new(parent, theme)
         _checkBtn = checkBtn,
     }
 
+    -- Key validation state (updated by open(), read by the persistent connection below)
+    local keyValid = false
+    checkBtn.MouseButton1Up:Connect(function()
+        local key = keyInput.getValue()
+        if #key >= 6 then
+            -- Backend will handle real validation
+            keyValid = true
+            executeSlot.Visible = true
+        end
+    end)
+
     local function doClose()
         TweenService:Create(backdrop, TWEEN_CLOSE, {BackgroundTransparency = 1}):Play()
         TweenService:Create(frame, TWEEN_CLOSE, {
@@ -161,6 +171,10 @@ function Modal.new(parent, theme)
             backdrop.Visible = false
             frame.Size = UDim2.new(0, 340, 0, 300)
             frame.BackgroundTransparency = theme.panelBgTransparency
+            if blurEffect then
+                blurEffect:Destroy()
+                blurEffect = nil
+            end
         end)
     end
 
@@ -188,17 +202,9 @@ function Modal.new(parent, theme)
             end)
         end
 
+        keyValid = false
         executeSlot.Visible = false
         keyInput.setValue("")
-
-        -- Key check stub
-        checkBtn.MouseButton1Up:Connect(function()
-            local key = keyInput.getValue()
-            if #key >= 6 then
-                -- Backend will handle real validation
-                executeSlot.Visible = true
-            end
-        end)
 
         backdrop.Visible = true
         frame.Visible = true

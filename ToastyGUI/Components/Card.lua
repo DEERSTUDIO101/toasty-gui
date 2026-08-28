@@ -91,7 +91,7 @@ function Card.new(parent, data, theme, onClick)
     -- Hover glow
     btn.MouseEnter:Connect(function()
         TweenService:Create(stroke, TWEEN, {Color = theme.accent, Transparency = 0.5}):Play()
-        TweenService:Create(btn, TWEEN, {BackgroundTransparency = theme.cardBgTransparency - 0.05}):Play()
+        TweenService:Create(btn, TWEEN, {BackgroundTransparency = math.max(0, theme.cardBgTransparency - 0.05)}):Play()
     end)
     btn.MouseLeave:Connect(function()
         TweenService:Create(stroke, TWEEN, {Color = theme.panelBorder, Transparency = theme.panelBorderTransparency}):Play()
