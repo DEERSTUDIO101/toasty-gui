@@ -92,7 +92,8 @@ local function clearScreen()
     end
     if modal then
         if modal.backdrop then modal.backdrop:Destroy() end
-        modal.close()   -- triggers doClose() which cleans up BlurEffect
+        if modal.frame then modal.frame:Destroy() end
+        modal.close()
         modal = nil
     end
 end
