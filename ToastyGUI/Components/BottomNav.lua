@@ -3,7 +3,7 @@ local TweenService = game:GetService("TweenService")
 local BottomNav = {}
 local TWEEN = TweenInfo.new(0.15, Enum.EasingStyle.Quad)
 
-function BottomNav.new(parent, items, theme, onSelect)
+function BottomNav.new(parent, items, theme, onSelect, initialId)
     local frame = Instance.new("Frame")
     frame.Size = UDim2.new(1, 0, 0, 60)
     frame.AnchorPoint = Vector2.new(0, 1)
@@ -26,7 +26,7 @@ function BottomNav.new(parent, items, theme, onSelect)
     layout.Parent = frame
 
     local buttons = {}
-    local activeId = items[1] and items[1].id
+    local activeId = initialId or (items[1] and items[1].id)
 
     local function setActive(id)
         activeId = id

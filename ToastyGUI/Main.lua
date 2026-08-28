@@ -91,10 +91,13 @@ local function clearScreen()
         activeScreenFrame = nil
     end
     if modal then
-        modal.frame:Destroy()
+        if modal.backdrop then modal.backdrop:Destroy() end
+        modal.close()   -- triggers doClose() which cleans up BlurEffect
         modal = nil
     end
 end
+
+local showSettings
 
 local function showHome()
     clearScreen()
@@ -119,7 +122,7 @@ local function showHome()
     )
 end
 
-local function showSettings()
+showSettings = function()
     clearScreen()
     currentScreen = "settings"
     local theme = ThemeProvider.getTheme()
@@ -142,9 +145,9 @@ local function showSettings()
     local contentW = mobile and 0 or -56
 
     if mobile then
-        BottomNav.new(wrapper, NAV_ITEMS, theme, navCallback)
+        BottomNav.new(wrapper, NAV_ITEMS, theme, navCallback, "settings")
     else
-        Sidebar.new(wrapper, NAV_ITEMS, theme, navCallback)
+        Sidebar.new(wrapper, NAV_ITEMS, theme, navCallback, "settings")
     end
 
     local contentFrame = Instance.new("Frame")

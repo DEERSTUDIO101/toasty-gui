@@ -146,7 +146,7 @@ function Modal.new(parent, theme)
 
     checkBtn.MouseButton1Up:Connect(function()
         local key = keyInput.getValue()
-        if #key >= 6 then
+        if #key >= 6 and #key <= 8 then
             -- Backend will handle real validation
             executeSlot.Visible = true
         end

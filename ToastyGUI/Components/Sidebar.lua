@@ -3,7 +3,7 @@ local TweenService = game:GetService("TweenService")
 local Sidebar = {}
 local TWEEN = TweenInfo.new(0.15, Enum.EasingStyle.Quad)
 
-function Sidebar.new(parent, items, theme, onSelect)
+function Sidebar.new(parent, items, theme, onSelect, initialId)
     local frame = Instance.new("Frame")
     frame.Size = UDim2.new(0, 56, 1, 0)
     frame.BackgroundColor3 = theme.panelBg
@@ -29,7 +29,7 @@ function Sidebar.new(parent, items, theme, onSelect)
     padding.Parent = frame
 
     local buttons = {}
-    local activeId = items[1] and items[1].id
+    local activeId = initialId or (items[1] and items[1].id)
 
     local function setActive(id)
         activeId = id
