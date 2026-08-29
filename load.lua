@@ -4,7 +4,6 @@ local user = { loggedIn=false, username=nil, purchased={} }
 
 local Window = ToastyUI:CreateWindow({
     Title = "Toasty Hub",
-    Theme = "Vantix",
 })
 
 local ScriptsTab = Window:AddTab("Scripts", "layers")
@@ -40,5 +39,5 @@ local grid = ScriptsTab:AddScriptGrid({
 })
 
 SettingsTab:AddDropdown({ Title = "UI Design", Icon = "paintbrush-vertical",
-    Options = { "Ocean", "Christmas", "Easter", "Blood", "Camo", "OceanBlue", "Neon", "Midnight", "RoseGold", "Light" }, Default = 1,
+    Options = { "Vantix", "Christmas", "Easter", "Blood", "Camo", "VantixBlue", "Neon", "Midnight", "RoseGold", "Light" }, Default = 1,
     Callback = function(selected) Window:SetTheme(selected) end })

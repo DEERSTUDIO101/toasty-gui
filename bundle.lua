@@ -1408,14 +1408,20 @@ local function makeScriptCard(parent, scriptData, user, onClick)
 
 	if isLocked then
 		local ov = inst("Frame",{
-			BackgroundColor3=Color3.new(0,0,0), BackgroundTransparency=0.45,
+			BackgroundColor3=Color3.new(0,0,0), BackgroundTransparency=0.3,
 			BorderSizePixel=0, Size=UDim2.fromScale(1,1), ZIndex=5,
 		}, banner)
+		local lockIconBg = inst("Frame",{
+			BackgroundColor3=Color3.new(0,0,0), BackgroundTransparency=0.35,
+			BorderSizePixel=0, Size=UDim2.new(0,32,0,32),
+			Position=UDim2.fromScale(0.5,0.5), AnchorPoint=Vector2.new(0.5,0.5), ZIndex=6,
+		}, ov)
+		inst("UICorner",{CornerRadius=UDim.new(0,8)}, lockIconBg)
 		if lucide then
-			img(ov,{
-				name="Lock", img=getLucide("lock",16), colorKey="white",
-				sz=UDim2.new(0,16,0,16),
-				pos=UDim2.fromScale(0.5,0.5), anchor=Vector2.new(0.5,0.5), z=6,
+			img(lockIconBg,{
+				name="Lock", img=getLucide("lock",18), colorKey="white",
+				sz=UDim2.new(0,18,0,18),
+				pos=UDim2.fromScale(0.5,0.5), anchor=Vector2.new(0.5,0.5), z=7,
 			})
 		end
 	end
