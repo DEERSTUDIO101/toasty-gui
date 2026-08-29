@@ -1428,14 +1428,13 @@ local function makeScriptCard(parent, scriptData, user, onClick)
 	}, banner)
 
 	if (scriptData.placeId and scriptData.placeId ~= "") or scriptData.universeId then
+		ph.Visible = false
 		local imgL = inst("ImageLabel",{
 			Size=UDim2.fromScale(1,1), BackgroundTransparency=1,
-			Image="", ScaleType=Enum.ScaleType.Crop, ZIndex=4, Visible=false,
+			Image="", ScaleType=Enum.ScaleType.Crop, ZIndex=4, Visible=true,
 		}, banner)
 		resolveUniverseId(scriptData, function(uid)
 			imgL.Image = "rbxthumb://type=GameThumbnail&id="..uid.."&w=768&h=432"
-			imgL.Visible = true
-			ph.Visible = false
 		end)
 	end
 
@@ -1553,15 +1552,14 @@ local function openScriptModal(sg, scriptData, user, callbacks)
 		TextYAlignment=Enum.TextYAlignment.Center, ZIndex=203,
 	}, bannerFrame)
 	if (scriptData.placeId and scriptData.placeId ~= "") or scriptData.universeId then
+		bannerPh.Visible = false
 		local bannerImg = inst("ImageLabel",{
 			Size=UDim2.fromScale(1,1), BackgroundTransparency=1,
-			Image="", ScaleType=Enum.ScaleType.Crop, ZIndex=203, Visible=false,
+			Image="", ScaleType=Enum.ScaleType.Crop, ZIndex=203, Visible=true,
 		}, bannerFrame)
 		rnd(bannerImg, 8)
 		resolveUniverseId(scriptData, function(uid)
 			bannerImg.Image = "rbxthumb://type=GameThumbnail&id="..uid.."&w=768&h=432"
-			bannerImg.Visible = true
-			bannerPh.Visible = false
 		end)
 	end
 
@@ -1583,15 +1581,14 @@ local function openScriptModal(sg, scriptData, user, callbacks)
 		TextYAlignment=Enum.TextYAlignment.Center, ZIndex=204,
 	}, iconBg)
 	if (scriptData.placeId and scriptData.placeId ~= "") or scriptData.universeId then
+		mph.Visible = false
 		local imgL = inst("ImageLabel",{
 			Size=UDim2.fromScale(1,1), BackgroundTransparency=1,
-			Image="", ScaleType=Enum.ScaleType.Crop, ZIndex=205, Visible=false,
+			Image="", ScaleType=Enum.ScaleType.Crop, ZIndex=205, Visible=true,
 		}, iconBg)
 		rnd(imgL, 10)
 		resolveUniverseId(scriptData, function(uid)
 			imgL.Image = "rbxthumb://type=GameIcon&id="..uid.."&w=150&h=150"
-			imgL.Visible = true
-			mph.Visible = false
 		end)
 	end
 
