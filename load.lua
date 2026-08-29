@@ -1,4 +1,4 @@
-local ToastyUI = loadstring(game:HttpGet("https://cdn.jsdelivr.net/gh/DEERSTUDIO101/toasty-gui@main/bundle.lua"))()
+local ToastyUI = loadstring(game:HttpGet("https://cdn.jsdelivr.net/gh/DEERSTUDIO101/toasty-gui@758dc59/bundle.lua"))()
 
 local user = { loggedIn=false, username=nil, purchased={} }
 
