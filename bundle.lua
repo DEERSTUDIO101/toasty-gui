@@ -1434,7 +1434,7 @@ local function makeScriptCard(parent, scriptData, user, onClick)
 			Image="", ScaleType=Enum.ScaleType.Crop, ZIndex=4, Visible=true,
 		}, banner)
 		resolveUniverseId(scriptData, function(uid)
-			imgL.Image = "rbxthumb://type=GameThumbnail&id="..uid.."&w=768&h=432"
+			imgL.Image = "rbxthumb://type=GameIcon&id="..uid.."&w=150&h=150"
 		end)
 	end
 
@@ -1559,7 +1559,7 @@ local function openScriptModal(sg, scriptData, user, callbacks)
 		}, bannerFrame)
 		rnd(bannerImg, 8)
 		resolveUniverseId(scriptData, function(uid)
-			bannerImg.Image = "rbxthumb://type=GameThumbnail&id="..uid.."&w=768&h=432"
+			bannerImg.Image = "rbxthumb://type=GameIcon&id="..uid.."&w=150&h=150"
 		end)
 	end
 
