@@ -36,6 +36,47 @@ local function assetImage(id)
 	return "rbxassetid://"..id
 end
 
+-- Resolves a universeId for a scriptData entry.
+-- Uses scriptData.universeId directly if present; otherwise queries Roblox API.
+local universeCache = {}
+local function resolveUniverseId(scriptData, callback)
+	local placeId = tostring(scriptData.placeId or "")
+	if scriptData.universeId then
+		callback(tostring(scriptData.universeId))
+		return
+	end
+	if placeId == "" then return end
+	if universeCache[placeId] then
+		callback(universeCache[placeId])
+		return
+	end
+	task.spawn(function()
+		-- try new API first, fall back to legacy
+		local uid
+		local ok, data = pcall(function()
+			local hs = game:GetService("HttpService")
+			local resp = hs:GetAsync("https://apis.roblox.com/universes/v1/places/"..placeId.."/universe")
+			return hs:JSONDecode(resp)
+		end)
+		if ok and data and data.universeId then
+			uid = tostring(data.universeId)
+		else
+			local ok2, data2 = pcall(function()
+				local hs = game:GetService("HttpService")
+				local resp = hs:GetAsync("https://api.roblox.com/universes/get-universe-containing-place?placeId="..placeId)
+				return hs:JSONDecode(resp)
+			end)
+			if ok2 and data2 and data2.UniverseId then
+				uid = tostring(data2.UniverseId)
+			end
+		end
+		if uid then
+			universeCache[placeId] = uid
+			callback(uid)
+		end
+	end)
+end
+
 local CORNER = 10
 local RISKY  = Color3.fromRGB(235, 80, 80)
 local BETA   = Color3.fromRGB(235, 190, 60)
@@ -1386,23 +1427,15 @@ local function makeScriptCard(parent, scriptData, user, onClick)
 		TextYAlignment=Enum.TextYAlignment.Center, ZIndex=3,
 	}, banner)
 
-	if scriptData.placeId and scriptData.placeId ~= "" then
+	if (scriptData.placeId and scriptData.placeId ~= "") or scriptData.universeId then
 		local imgL = inst("ImageLabel",{
 			Size=UDim2.fromScale(1,1), BackgroundTransparency=1,
 			Image="", ScaleType=Enum.ScaleType.Crop, ZIndex=4, Visible=false,
 		}, banner)
-		task.spawn(function()
-			local ok, data = pcall(function()
-				local resp = game:HttpGetAsync(
-					"https://api.roblox.com/universes/get-universe-containing-place?placeId="
-					..scriptData.placeId)
-				return game:GetService("HttpService"):JSONDecode(resp)
-			end)
-			if ok and data and data.UniverseId then
-				imgL.Image = "rbxthumb://type=GameThumbnail&id="..data.UniverseId.."&w=768&h=432"
-				imgL.Visible = true
-				ph.Visible = false
-			end
+		resolveUniverseId(scriptData, function(uid)
+			imgL.Image = "rbxthumb://type=GameThumbnail&id="..uid.."&w=768&h=432"
+			imgL.Visible = true
+			ph.Visible = false
 		end)
 	end
 
@@ -1519,24 +1552,16 @@ local function openScriptModal(sg, scriptData, user, callbacks)
 		TextXAlignment=Enum.TextXAlignment.Center,
 		TextYAlignment=Enum.TextYAlignment.Center, ZIndex=203,
 	}, bannerFrame)
-	if scriptData.placeId and scriptData.placeId ~= "" then
+	if (scriptData.placeId and scriptData.placeId ~= "") or scriptData.universeId then
 		local bannerImg = inst("ImageLabel",{
 			Size=UDim2.fromScale(1,1), BackgroundTransparency=1,
 			Image="", ScaleType=Enum.ScaleType.Crop, ZIndex=203, Visible=false,
 		}, bannerFrame)
 		rnd(bannerImg, 8)
-		task.spawn(function()
-			local ok, data = pcall(function()
-				local resp = game:HttpGetAsync(
-					"https://api.roblox.com/universes/get-universe-containing-place?placeId="
-					..scriptData.placeId)
-				return game:GetService("HttpService"):JSONDecode(resp)
-			end)
-			if ok and data and data.UniverseId then
-				bannerImg.Image = "rbxthumb://type=GameThumbnail&id="..data.UniverseId.."&w=768&h=432"
-				bannerImg.Visible = true
-				bannerPh.Visible = false
-			end
+		resolveUniverseId(scriptData, function(uid)
+			bannerImg.Image = "rbxthumb://type=GameThumbnail&id="..uid.."&w=768&h=432"
+			bannerImg.Visible = true
+			bannerPh.Visible = false
 		end)
 	end
 
@@ -1557,24 +1582,16 @@ local function openScriptModal(sg, scriptData, user, callbacks)
 		TextXAlignment=Enum.TextXAlignment.Center,
 		TextYAlignment=Enum.TextYAlignment.Center, ZIndex=204,
 	}, iconBg)
-	if scriptData.placeId and scriptData.placeId ~= "" then
+	if (scriptData.placeId and scriptData.placeId ~= "") or scriptData.universeId then
 		local imgL = inst("ImageLabel",{
 			Size=UDim2.fromScale(1,1), BackgroundTransparency=1,
 			Image="", ScaleType=Enum.ScaleType.Crop, ZIndex=205, Visible=false,
 		}, iconBg)
 		rnd(imgL, 10)
-		task.spawn(function()
-			local ok, data = pcall(function()
-				local resp = game:HttpGetAsync(
-					"https://api.roblox.com/universes/get-universe-containing-place?placeId="
-					..scriptData.placeId)
-				return game:GetService("HttpService"):JSONDecode(resp)
-			end)
-			if ok and data and data.UniverseId then
-				imgL.Image = "rbxthumb://type=GameIcon&id="..data.UniverseId.."&w=150&h=150"
-				imgL.Visible = true
-				mph.Visible = false
-			end
+		resolveUniverseId(scriptData, function(uid)
+			imgL.Image = "rbxthumb://type=GameIcon&id="..uid.."&w=150&h=150"
+			imgL.Visible = true
+			mph.Visible = false
 		end)
 	end
 
