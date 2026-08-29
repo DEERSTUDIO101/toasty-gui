@@ -1343,6 +1343,409 @@ function VantixUI:GetAccentColor()
 	return K.white
 end
 
+-- ── Script-hub helpers (module-level so CreateWindow can use them) ──────────
+
+local CARD_W, CARD_H = 168, 196
+local BADGE_COLORS = {
+	Ad      = Color3.fromRGB(217, 119,  6),
+	Premium = Color3.fromRGB(147,  51, 234),
+}
+
+local function makeScriptCard(parent, scriptData, user, onClick)
+	local isPurchased = user.loggedIn and user.purchased
+		and table.find(user.purchased, scriptData.id) ~= nil
+	local isPremium   = scriptData.type == "Premium"
+	local isLocked    = isPremium and not (user.loggedIn and isPurchased)
+
+	local card = inst("TextButton",{
+		Size=UDim2.new(0,CARD_W,0,CARD_H),
+		BackgroundColor3=K.surface, BorderSizePixel=0,
+		Text="", AutoButtonColor=false, ClipsDescendants=true,
+	}, parent)
+	rnd(card, 10)
+
+	local stroke = inst("UIStroke",{
+		Color=K.border, Thickness=1,
+		ApplyStrokeMode=Enum.ApplyStrokeMode.Border,
+	}, card)
+	registerThemeUpdater(function()
+		card.BackgroundColor3 = K.surface
+		stroke.Color = K.border
+	end, card)
+
+	local banner = frame(card,{
+		name="Banner", colorKey="raised",
+		size=UDim2.new(1,0,0,100),
+		pos=UDim2.new(0,0,0,0), z=2, clip=true,
+	})
+
+	local ph = inst("TextLabel",{
+		Size=UDim2.fromScale(1,1), BackgroundTransparency=1,
+		Text="🎮", TextSize=32, Font=Enum.Font.Gotham,
+		TextXAlignment=Enum.TextXAlignment.Center,
+		TextYAlignment=Enum.TextYAlignment.Center, ZIndex=3,
+	}, banner)
+
+	if scriptData.placeId and scriptData.placeId ~= "" then
+		local imgL = inst("ImageLabel",{
+			Size=UDim2.fromScale(1,1), BackgroundTransparency=1,
+			Image="", ScaleType=Enum.ScaleType.Crop, ZIndex=4, Visible=false,
+		}, banner)
+		task.spawn(function()
+			local ok, data = pcall(function()
+				local resp = game:HttpGetAsync(
+					"https://api.roblox.com/universes/get-universe-containing-place?placeId="
+					..scriptData.placeId)
+				return game:GetService("HttpService"):JSONDecode(resp)
+			end)
+			if ok and data and data.UniverseId then
+				imgL.Image = "rbxthumb://type=GameThumbnail&id="..data.UniverseId.."&w=768&h=432"
+				imgL.Visible = true
+				ph.Visible = false
+			end
+		end)
+	end
+
+	if isLocked then
+		local ov = inst("Frame",{
+			BackgroundColor3=Color3.new(0,0,0), BackgroundTransparency=0.45,
+			BorderSizePixel=0, Size=UDim2.fromScale(1,1), ZIndex=5,
+		}, banner)
+		if lucide then
+			img(ov,{
+				name="Lock", img=getLucide("lock",16), colorKey="white",
+				sz=UDim2.new(0,16,0,16),
+				pos=UDim2.fromScale(0.5,0.5), anchor=Vector2.new(0.5,0.5), z=6,
+			})
+		end
+	end
+
+	lbl(card,{
+		text=scriptData.name, font=Enum.Font.GothamMedium, size=13, colorKey="text",
+		sz=UDim2.new(1,-16,0,16), pos=UDim2.new(0,8,0,108), z=2,
+		xa=Enum.TextXAlignment.Center,
+	})
+
+	local bc = BADGE_COLORS[scriptData.type] or BADGE_COLORS.Ad
+	local badge = inst("Frame",{
+		Size=UDim2.new(0,0,0,17), AnchorPoint=Vector2.new(0.5,0),
+		Position=UDim2.new(0.5,0,0,126), AutomaticSize=Enum.AutomaticSize.X,
+		BackgroundColor3=bc, BackgroundTransparency=0.25,
+		BorderSizePixel=0, ZIndex=3,
+	}, card)
+	rnd(badge, 99)
+	inst("UIPadding",{PaddingLeft=UDim.new(0,8),PaddingRight=UDim.new(0,8)}, badge)
+	inst("TextLabel",{
+		Size=UDim2.new(0,0,1,0), AutomaticSize=Enum.AutomaticSize.X,
+		BackgroundTransparency=1, Text=scriptData.type,
+		TextColor3=Color3.fromRGB(255,255,255), Font=Enum.Font.GothamBold,
+		TextSize=10, TextXAlignment=Enum.TextXAlignment.Center, ZIndex=4,
+	}, badge)
+
+	local hintText = isLocked and "Login required"
+		or isPurchased and "Purchased ✓"
+		or "Get Key →"
+	local hintCol = isLocked and K.muted or isPurchased and K.white or K.sub
+	lbl(card,{
+		text=hintText, font=Enum.Font.Gotham, size=10, color=hintCol,
+		sz=UDim2.new(1,-16,0,13), pos=UDim2.new(0,8,1,-26), z=2,
+		xa=Enum.TextXAlignment.Center,
+	})
+
+	card.MouseEnter:Connect(function()
+		tw(card,{BackgroundColor3=K.raised},0.1):Play()
+		stroke.Color = K.borderHi
+	end)
+	card.MouseLeave:Connect(function()
+		tw(card,{BackgroundColor3=K.surface},0.1):Play()
+		stroke.Color = K.border
+	end)
+	card.MouseButton1Click:Connect(function()
+		if onClick then onClick(scriptData) end
+	end)
+
+	return card
+end
+
+local _activeModal
+
+local function openScriptModal(sg, scriptData, user, callbacks)
+	if _activeModal then pcall(function() _activeModal:Destroy() end) _activeModal = nil end
+
+	local isPurchased = user.loggedIn and user.purchased
+		and table.find(user.purchased, scriptData.id) ~= nil
+	local isPremium   = scriptData.type == "Premium"
+	local isLocked    = isPremium and not (user.loggedIn and isPurchased)
+
+	local backdrop = inst("TextButton",{
+		Name="ModalBd", BackgroundColor3=Color3.new(0,0,0),
+		BackgroundTransparency=0.5, Text="", AutoButtonColor=false,
+		Size=UDim2.fromScale(1,1), ZIndex=200,
+	}, sg)
+	_activeModal = backdrop
+
+	local card = inst("CanvasGroup",{
+		Name="ScriptModal", BackgroundColor3=K.bg, GroupTransparency=1,
+		Size=UDim2.new(0,360,0,0), AutomaticSize=Enum.AutomaticSize.Y,
+		Position=UDim2.fromScale(0.5,0.5), AnchorPoint=Vector2.new(0.5,0.5),
+		ZIndex=201,
+	}, backdrop)
+	rnd(card, 12)
+	brd(card, "borderHi", 1)
+	registerThemeUpdater(function() card.BackgroundColor3 = K.bg end, card)
+	pad(card, 20, 20, 20, 20)
+	inst("UIListLayout",{
+		FillDirection=Enum.FillDirection.Vertical,
+		SortOrder=Enum.SortOrder.LayoutOrder,
+		Padding=UDim.new(0,12),
+	}, card)
+	local cardScale = inst("UIScale",{Scale=0.9}, card)
+
+	local bannerFrame = frame(card, {
+		name="BannerFrame", colorKey="raised",
+		size=UDim2.new(1,0,0,180), z=202, clip=true,
+	})
+	bannerFrame.LayoutOrder = 0
+	rnd(bannerFrame, 8)
+	local bannerPh = inst("TextLabel",{
+		Size=UDim2.fromScale(1,1), BackgroundTransparency=1,
+		Text="🎮", TextSize=48, Font=Enum.Font.Gotham,
+		TextXAlignment=Enum.TextXAlignment.Center,
+		TextYAlignment=Enum.TextYAlignment.Center, ZIndex=203,
+	}, bannerFrame)
+	if scriptData.placeId and scriptData.placeId ~= "" then
+		local bannerImg = inst("ImageLabel",{
+			Size=UDim2.fromScale(1,1), BackgroundTransparency=1,
+			Image="", ScaleType=Enum.ScaleType.Crop, ZIndex=203, Visible=false,
+		}, bannerFrame)
+		rnd(bannerImg, 8)
+		task.spawn(function()
+			local ok, data = pcall(function()
+				local resp = game:HttpGetAsync(
+					"https://api.roblox.com/universes/get-universe-containing-place?placeId="
+					..scriptData.placeId)
+				return game:GetService("HttpService"):JSONDecode(resp)
+			end)
+			if ok and data and data.UniverseId then
+				bannerImg.Image = "rbxthumb://type=GameThumbnail&id="..data.UniverseId.."&w=768&h=432"
+				bannerImg.Visible = true
+				bannerPh.Visible = false
+			end
+		end)
+	end
+
+	local hdr = inst("Frame",{
+		Name="Hdr", BackgroundTransparency=1,
+		Size=UDim2.new(1,0,0,40), LayoutOrder=1, ZIndex=202,
+	}, card)
+	local iconBg = frame(hdr,{
+		name="IB", colorKey="raised",
+		size=UDim2.new(0,40,0,40),
+		pos=UDim2.new(0,0,0.5,0), anchor=Vector2.new(0,0.5), z=203,
+	})
+	rnd(iconBg, 10)
+
+	local mph = inst("TextLabel",{
+		Size=UDim2.fromScale(1,1), BackgroundTransparency=1,
+		Text="🎮", TextSize=18, Font=Enum.Font.Gotham,
+		TextXAlignment=Enum.TextXAlignment.Center,
+		TextYAlignment=Enum.TextYAlignment.Center, ZIndex=204,
+	}, iconBg)
+	if scriptData.placeId and scriptData.placeId ~= "" then
+		local imgL = inst("ImageLabel",{
+			Size=UDim2.fromScale(1,1), BackgroundTransparency=1,
+			Image="", ScaleType=Enum.ScaleType.Crop, ZIndex=205, Visible=false,
+		}, iconBg)
+		rnd(imgL, 10)
+		task.spawn(function()
+			local ok, data = pcall(function()
+				local resp = game:HttpGetAsync(
+					"https://api.roblox.com/universes/get-universe-containing-place?placeId="
+					..scriptData.placeId)
+				return game:GetService("HttpService"):JSONDecode(resp)
+			end)
+			if ok and data and data.UniverseId then
+				imgL.Image = "rbxthumb://type=GameIcon&id="..data.UniverseId.."&w=150&h=150"
+				imgL.Visible = true
+				mph.Visible = false
+			end
+		end)
+	end
+
+	lbl(hdr,{
+		text=scriptData.name, font=Enum.Font.GothamBold, size=16, colorKey="text",
+		sz=UDim2.new(1,-52,0,20), pos=UDim2.new(0,50,0,0), z=203,
+	})
+	lbl(hdr,{
+		text=scriptData.type, font=Enum.Font.GothamMedium, size=12, colorKey="muted",
+		sz=UDim2.new(1,-52,0,16), pos=UDim2.new(0,50,0,22), z=203,
+	})
+
+	local function dismiss()
+		if not _activeModal then return end
+		_activeModal = nil
+		local t = tw(card,{GroupTransparency=1},0.14,Enum.EasingStyle.Quint)
+		t:Play()
+		tw(cardScale,{Scale=0.9},0.14):Play()
+		t.Completed:Connect(function() backdrop:Destroy() end)
+	end
+	backdrop.MouseButton1Click:Connect(dismiss)
+
+	local actions = inst("Frame",{
+		Name="Actions", BackgroundTransparency=1,
+		Size=UDim2.new(1,0,0,0), AutomaticSize=Enum.AutomaticSize.Y,
+		LayoutOrder=2, ZIndex=202,
+	}, card)
+	inst("UIListLayout",{
+		FillDirection=Enum.FillDirection.Vertical,
+		SortOrder=Enum.SortOrder.LayoutOrder,
+		Padding=UDim.new(0,8),
+	}, actions)
+
+	local function mkBtn(text, primary, lo, cb)
+		local b = btn(actions,{
+			name="B"..lo, text=text, font=Enum.Font.GothamBold, size=13,
+			colorKey=primary and "white" or "raised",
+			tcKey=primary and "black" or "text",
+			sz=UDim2.new(1,0,0,36), z=203,
+		})
+		b.LayoutOrder = lo
+		rnd(b, 8)
+		if primary then
+			b.MouseEnter:Connect(function() tw(b,{BackgroundColor3=shade(K.white,0.85)},0.1):Play() end)
+			b.MouseLeave:Connect(function() tw(b,{BackgroundColor3=K.white},0.1):Play() end)
+		else
+			b.MouseEnter:Connect(function() tw(b,{BackgroundColor3=K.border},0.1):Play() end)
+			b.MouseLeave:Connect(function() tw(b,{BackgroundColor3=K.raised},0.1):Play() end)
+		end
+		b.MouseButton1Click:Connect(function() dismiss(); if cb then pcall(cb) end end)
+		return b
+	end
+
+	local desc = lbl(actions,{
+		text="", font=Enum.Font.Gotham, size=12, colorKey="sub", wrap=true,
+		sz=UDim2.new(1,0,0,0), z=202, ya=Enum.TextYAlignment.Top,
+	})
+	desc.LayoutOrder = 0
+	desc.AutomaticSize = Enum.AutomaticSize.Y
+
+	if isLocked then
+		desc.Text = "This script requires a Premium account. Login with your key to access it."
+		mkBtn("Login with Key", true, 1, function()
+			if callbacks and callbacks.onRequestLogin then callbacks.onRequestLogin() end
+		end)
+		mkBtn("Cancel", false, 2)
+	elseif isPurchased then
+		desc.Text = "You have access. Enter your key to execute."
+		local tb = makeTextBox(actions, "Script key…", "")
+		tb.frame.Size = UDim2.new(1,0,0,34)
+		tb.frame.LayoutOrder = 1
+		tb.frame.ZIndex = 203
+		mkBtn("Execute", true, 2, function()
+			if callbacks and callbacks.onCheckKey then
+				callbacks.onCheckKey(scriptData.id, tb.getText())
+			end
+		end)
+		mkBtn("Cancel", false, 3)
+	else
+		desc.Text = "Get your free key from our website, then paste it below."
+		local tb = makeTextBox(actions, "Paste key here…", "")
+		tb.frame.Size = UDim2.new(1,0,0,34)
+		tb.frame.LayoutOrder = 1
+		tb.frame.ZIndex = 203
+		mkBtn("Get Key →", false, 2, function()
+			if callbacks and callbacks.onGetKey then callbacks.onGetKey(scriptData) end
+		end)
+		mkBtn("Execute", true, 3, function()
+			if callbacks and callbacks.onCheckKey then
+				callbacks.onCheckKey(scriptData.id, tb.getText())
+			end
+		end)
+		mkBtn("Cancel", false, 4)
+	end
+
+	tw(card,{GroupTransparency=0},0.18,Enum.EasingStyle.Quint):Play()
+	tw(cardScale,{Scale=1},0.22,Enum.EasingStyle.Back):Play()
+end
+
+local function showLoginGate(sg, onLogin, onGuest)
+	local backdrop = inst("TextButton",{
+		Name="LoginBd", BackgroundColor3=Color3.new(0,0,0),
+		BackgroundTransparency=0.55, Text="", AutoButtonColor=false,
+		Size=UDim2.fromScale(1,1), ZIndex=200,
+	}, sg)
+
+	local card = inst("CanvasGroup",{
+		Name="LoginCard", BackgroundColor3=K.bg, GroupTransparency=1,
+		Size=UDim2.new(0,320,0,0), AutomaticSize=Enum.AutomaticSize.Y,
+		Position=UDim2.fromScale(0.5,0.5), AnchorPoint=Vector2.new(0.5,0.5),
+		ZIndex=201,
+	}, backdrop)
+	rnd(card, 12)
+	brd(card, "borderHi", 1)
+	registerThemeUpdater(function() card.BackgroundColor3 = K.bg end, card)
+	pad(card, 22, 22, 22, 22)
+	inst("UIListLayout",{
+		FillDirection=Enum.FillDirection.Vertical,
+		SortOrder=Enum.SortOrder.LayoutOrder,
+		Padding=UDim.new(0,14),
+	}, card)
+	local cardScale = inst("UIScale",{Scale=0.9}, card)
+
+	local tl = lbl(card,{
+		text="Toasty Hub", font=Enum.Font.GothamBold, size=18, colorKey="white",
+		sz=UDim2.new(1,0,0,22), z=202, xa=Enum.TextXAlignment.Center,
+	})
+	tl.LayoutOrder = 1
+
+	local sl = lbl(card,{
+		text="Enter your account key, or continue as guest",
+		font=Enum.Font.Gotham, size=12, colorKey="sub", wrap=true,
+		sz=UDim2.new(1,0,0,0), z=202, xa=Enum.TextXAlignment.Center,
+	})
+	sl.LayoutOrder = 2
+	sl.AutomaticSize = Enum.AutomaticSize.Y
+
+	local tb = makeTextBox(card, "Account key (6–8 chars)…", "")
+	tb.frame.Size = UDim2.new(1,0,0,36)
+	tb.frame.LayoutOrder = 3
+	tb.frame.ZIndex = 202
+
+	local contBtn = btn(card,{
+		name="Cont", text="Continue", font=Enum.Font.GothamBold, size=13,
+		colorKey="white", tcKey="black",
+		sz=UDim2.new(1,0,0,36), z=202,
+	})
+	contBtn.LayoutOrder = 4
+	rnd(contBtn, 8)
+	contBtn.MouseEnter:Connect(function() tw(contBtn,{BackgroundColor3=shade(K.white,0.85)},0.1):Play() end)
+	contBtn.MouseLeave:Connect(function() tw(contBtn,{BackgroundColor3=K.white},0.1):Play() end)
+	contBtn.MouseButton1Click:Connect(function()
+		local key = tb.getText()
+		if #key < 6 or #key > 8 then return end
+		backdrop:Destroy()
+		if onLogin then pcall(onLogin, key) end
+	end)
+
+	local guestBtn = btn(card,{
+		name="Guest", text="Continue as Guest →", font=Enum.Font.Gotham, size=12,
+		colorKey="bg", tcKey="muted",
+		sz=UDim2.new(1,0,0,20), z=202,
+	})
+	guestBtn.LayoutOrder = 5
+	guestBtn.MouseEnter:Connect(function() tw(guestBtn,{TextColor3=K.sub},0.1):Play() end)
+	guestBtn.MouseLeave:Connect(function() tw(guestBtn,{TextColor3=K.muted},0.1):Play() end)
+	guestBtn.MouseButton1Click:Connect(function()
+		backdrop:Destroy()
+		if onGuest then pcall(onGuest) end
+	end)
+
+	tw(card,{GroupTransparency=0},0.2,Enum.EasingStyle.Quint):Play()
+	tw(cardScale,{Scale=1},0.26,Enum.EasingStyle.Back):Play()
+end
+
+-- ────────────────────────────────────────────────────────────────────────────
+
 function VantixUI:CreateWindow(config)
 	config = config or {}
 	if config.Theme and THEMES[config.Theme] then
@@ -1947,7 +2350,7 @@ function VantixUI:CreateWindow(config)
 			size=UDim2.new(0,1,1,0),pos=UDim2.new(0,SIDE_W-1,0,0),z=15,
 		})
 		
-		local profileH = 68
+		local profileH = 0
 
 		sidebarScroll = inst("ScrollingFrame", {
 			Name="SidebarScroll", Size=UDim2.new(1,0,1,-profileH), Position=UDim2.new(0,0,0,0),
@@ -1965,72 +2368,6 @@ function VantixUI:CreateWindow(config)
 		}, sidebarScroll)
 		pad(sidebarScroll, 6, 6, 8, 8)
 
-		local profileSection = frame(sidebar,{
-			name="Profile", colorKey="bg", trans=1,
-			size=UDim2.new(1,-1,0,profileH),
-			pos=UDim2.new(0,0,1,0), anchor=Vector2.new(0,1),
-			z=6,
-		})
-
-		frame(profileSection,{
-			name="PSep", colorKey="border",
-			size=UDim2.new(1,-16,0,1), pos=UDim2.new(0,8,0,0), z=7,
-		})
-
-		local AVA = 46
-		local avatarHolder = frame(profileSection,{
-			name="Avatar", colorKey="raised",
-			size=UDim2.new(0,AVA,0,AVA),
-			pos=UDim2.new(0,8,0.5,0), anchor=Vector2.new(0,0.5),
-			z=7,
-		})
-		rnd(avatarHolder,99)
-		brd(avatarHolder,"border",1)
-
-		local avatarImg = inst("ImageLabel",{
-			BackgroundTransparency=1, Image="",
-			Size=UDim2.fromScale(1,1), ZIndex=8,
-			ScaleType=Enum.ScaleType.Crop,
-		}, avatarHolder)
-		rnd(avatarImg,99)
-
-		local txtX = AVA + 16
-		local nameLbl = lbl(profileSection,{
-			text=player.DisplayName,
-			font=Enum.Font.GothamBold, size=15, colorKey="text",
-			sz=UDim2.new(1,-txtX-4,0,18),
-			pos=UDim2.new(0,txtX,0.5,-15), z=7,
-		})
-		nameLbl.TextTruncate = Enum.TextTruncate.AtEnd
-
-		local execLbl = lbl(profileSection,{
-			text="",
-			font=Enum.Font.GothamMedium, size=13, colorKey="muted",
-			sz=UDim2.new(1,-txtX-4,0,15),
-			pos=UDim2.new(0,txtX,0.5,5), z=7,
-		})
-		execLbl.TextTruncate = Enum.TextTruncate.AtEnd
-
-		task.spawn(function()
-			local ok, thumb = pcall(function()
-				return Players:GetUserThumbnailAsync(
-					player.UserId,
-					Enum.ThumbnailType.AvatarBust,
-					Enum.ThumbnailSize.Size100x100
-				)
-			end)
-			if ok and type(thumb) == "string" then avatarImg.Image = thumb end
-
-			local execName = "Unknown"
-			pcall(function()
-				if identifyexecutor then
-					execName = identifyexecutor()
-				elseif getexecutorname then
-					execName = getexecutorname()
-				end
-			end)
-			execLbl.Text = execName
-		end)
 	end
 
 	local contentX = SIDE_W
@@ -3067,6 +3404,48 @@ function VantixUI:CreateWindow(config)
 			})
 		end
 
+		function Tab:AddInput(opts)
+			return self:AddTextBox(opts)
+		end
+
+		function Tab:AddScriptGrid(opts)
+			endGroup()
+			for _, c in ipairs(scroll:GetChildren()) do
+				if c:IsA("UIListLayout") or c:IsA("UIPadding") then c:Destroy() end
+			end
+			inst("UIGridLayout",{
+				CellSize=UDim2.new(0,CARD_W,0,CARD_H),
+				CellPadding=UDim2.new(0,12,0,12),
+				SortOrder=Enum.SortOrder.LayoutOrder,
+				HorizontalAlignment=Enum.HorizontalAlignment.Center,
+			}, scroll)
+			pad(scroll, 16, 16, 16, 16)
+
+			local scripts = opts.scripts or opts.Scripts or {}
+			local user    = opts.user or opts.User or { loggedIn=false, purchased={} }
+			local onOpen  = opts.onOpen or opts.OnOpen
+
+			local function rebuild(newScripts, newUser)
+				newScripts = newScripts or scripts
+				newUser    = newUser    or user
+				for _, c in ipairs(scroll:GetChildren()) do
+					if c:IsA("TextButton") then c:Destroy() end
+				end
+				for i, sd in ipairs(newScripts) do
+					local card = makeScriptCard(scroll, sd, newUser, function(scriptData)
+						if onOpen then pcall(onOpen, scriptData, newUser) end
+					end)
+					card.LayoutOrder = i
+				end
+			end
+			rebuild()
+
+			return {
+				Rebuild   = rebuild,
+				GetScroll = function() return scroll end,
+			}
+		end
+
 		function Tab:GetScroll()
 			return scroll
 		end
@@ -3489,6 +3868,14 @@ function VantixUI:CreateWindow(config)
 		return sg
 	end
 
+	function Window:ShowLoginGate(onLogin, onGuest)
+		showLoginGate(sg, onLogin, onGuest)
+	end
+
+	function Window:OpenScriptModal(scriptData, user, callbacks)
+		openScriptModal(sg, scriptData, user, callbacks)
+	end
+
 	return Window
 end
 
@@ -3657,504 +4044,5 @@ function VantixUI:CreateNewWindow(config)
 	return Panel
 end
 
--- ════════════════════════════════════════════════════════════════════════════
---  Toasty Hub — script hub built on VantixUI6
--- ════════════════════════════════════════════════════════════════════════════
 
-local SCRIPTS = {
-	{ id="blox-fruits",     name="Blox Fruits",       type="Premium", iconId="", link="" },
-	{ id="pet-sim-x",       name="Pet Sim X",         type="Ad",      iconId="", link="https://toastyhub.com/key/pet-sim-x" },
-	{ id="anime-champions", name="Anime Champions",   type="Ad",      iconId="", link="https://toastyhub.com/key/anime-champions" },
-	{ id="fisch",           name="Fisch",             type="Premium", iconId="", link="" },
-	{ id="sols-rng",        name="Sol's RNG",         type="Ad",      iconId="", link="https://toastyhub.com/key/sols-rng" },
-	{ id="clicker-sim",     name="Clicker Simulator", type="Premium", iconId="", link="" },
-	{ id="murder-mystery",  name="Murder Mystery 2",  type="Ad",      iconId="", link="https://toastyhub.com/key/mm2" },
-	{ id="jailbreak",       name="Jailbreak",         type="Premium", iconId="", link="" },
-}
-
-local hubUser = { loggedIn=false, username=nil, purchased={} }
-
--- ── ScriptCard (uses VantixUI6 helpers: inst, rnd, frame, lbl, btn, img, tw, pad, K) ──
-
-local CARD_W, CARD_H = 168, 196
-local BADGE_COLORS = {
-	Ad      = Color3.fromRGB(217, 119,  6),
-	Premium = Color3.fromRGB(147,  51, 234),
-}
-
-local function makeScriptCard(parent, scriptData, user, onClick)
-	local isPurchased = user.loggedIn and user.purchased
-		and table.find(user.purchased, scriptData.id) ~= nil
-	local isPremium   = scriptData.type == "Premium"
-	local isLocked    = isPremium and not (user.loggedIn and isPurchased)
-
-	local card = inst("TextButton",{
-		Size=UDim2.new(0,CARD_W,0,CARD_H),
-		BackgroundColor3=K.surface, BorderSizePixel=0,
-		Text="", AutoButtonColor=false,
-	}, parent)
-	rnd(card, 10)
-
-	local stroke = inst("UIStroke",{
-		Color=K.border, Thickness=1,
-		ApplyStrokeMode=Enum.ApplyStrokeMode.Border,
-	}, card)
-	registerThemeUpdater(function()
-		card.BackgroundColor3 = K.surface
-		stroke.Color = K.border
-	end, card)
-
-	local iconBg = frame(card,{
-		name="IB", colorKey="raised",
-		size=UDim2.new(0,54,0,54),
-		pos=UDim2.new(0.5,-27,0,18), z=2,
-	})
-	rnd(iconBg, 12)
-
-	if scriptData.iconId ~= "" then
-		local imgL = inst("ImageLabel",{
-			Size=UDim2.fromScale(1,1), BackgroundTransparency=1,
-			Image="rbxthumb://type=Asset&id="..scriptData.iconId.."&w=150&h=150",
-			ScaleType=Enum.ScaleType.Crop, ZIndex=3,
-		}, iconBg)
-		rnd(imgL, 12)
-	else
-		inst("TextLabel",{
-			Size=UDim2.fromScale(1,1), BackgroundTransparency=1,
-			Text="🎮", TextSize=26, Font=Enum.Font.Gotham,
-			TextXAlignment=Enum.TextXAlignment.Center,
-			TextYAlignment=Enum.TextYAlignment.Center, ZIndex=3,
-		}, iconBg)
-	end
-
-	if isLocked then
-		local ov = inst("Frame",{
-			BackgroundColor3=Color3.new(0,0,0), BackgroundTransparency=0.45,
-			BorderSizePixel=0, Size=UDim2.fromScale(1,1), ZIndex=4,
-		}, iconBg)
-		rnd(ov, 12)
-		if lucide then
-			img(ov,{
-				name="Lock", img=getLucide("lock",16), colorKey="white",
-				sz=UDim2.new(0,16,0,16),
-				pos=UDim2.fromScale(0.5,0.5), anchor=Vector2.new(0.5,0.5), z=5,
-			})
-		end
-	end
-
-	lbl(card,{
-		text=scriptData.name, font=Enum.Font.GothamMedium, size=13, colorKey="text",
-		sz=UDim2.new(1,-16,0,16), pos=UDim2.new(0,8,0,80), z=2,
-		xa=Enum.TextXAlignment.Center,
-	})
-
-	local bc = BADGE_COLORS[scriptData.type] or BADGE_COLORS.Ad
-	local badge = inst("Frame",{
-		Size=UDim2.new(0,0,0,17), AnchorPoint=Vector2.new(0.5,0),
-		Position=UDim2.new(0.5,0,0,102), AutomaticSize=Enum.AutomaticSize.X,
-		BackgroundColor3=bc, BackgroundTransparency=0.25,
-		BorderSizePixel=0, ZIndex=3,
-	}, card)
-	rnd(badge, 99)
-	inst("UIPadding",{PaddingLeft=UDim.new(0,8),PaddingRight=UDim.new(0,8)}, badge)
-	inst("TextLabel",{
-		Size=UDim2.new(0,0,1,0), AutomaticSize=Enum.AutomaticSize.X,
-		BackgroundTransparency=1, Text=scriptData.type,
-		TextColor3=Color3.fromRGB(255,255,255), Font=Enum.Font.GothamBold,
-		TextSize=10, TextXAlignment=Enum.TextXAlignment.Center, ZIndex=4,
-	}, badge)
-
-	local hintText = isLocked and "Login required"
-		or isPurchased and "Purchased ✓"
-		or "Get Key →"
-	local hintCol = isLocked and K.muted or isPurchased and K.white or K.sub
-	lbl(card,{
-		text=hintText, font=Enum.Font.Gotham, size=10, color=hintCol,
-		sz=UDim2.new(1,-16,0,13), pos=UDim2.new(0,8,1,-26), z=2,
-		xa=Enum.TextXAlignment.Center,
-	})
-
-	card.MouseEnter:Connect(function()
-		tw(card,{BackgroundColor3=K.raised},0.1):Play()
-		stroke.Color = K.borderHi
-	end)
-	card.MouseLeave:Connect(function()
-		tw(card,{BackgroundColor3=K.surface},0.1):Play()
-		stroke.Color = K.border
-	end)
-	card.MouseButton1Click:Connect(function()
-		if onClick then onClick(scriptData) end
-	end)
-
-	return card
-end
-
--- ── ScriptModal ─────────────────────────────────────────────────────────────
-
-local activeModal
-
-local function openScriptModal(sg, scriptData, user, callbacks)
-	if activeModal then pcall(function() activeModal:Destroy() end) activeModal = nil end
-
-	local isPurchased = user.loggedIn and user.purchased
-		and table.find(user.purchased, scriptData.id) ~= nil
-	local isPremium   = scriptData.type == "Premium"
-	local isLocked    = isPremium and not (user.loggedIn and isPurchased)
-
-	local backdrop = inst("TextButton",{
-		Name="ModalBd", BackgroundColor3=Color3.new(0,0,0),
-		BackgroundTransparency=0.5, Text="", AutoButtonColor=false,
-		Size=UDim2.fromScale(1,1), ZIndex=200,
-	}, sg)
-	activeModal = backdrop
-
-	local card = inst("CanvasGroup",{
-		Name="ScriptModal", BackgroundColor3=K.bg, GroupTransparency=1,
-		Size=UDim2.new(0,360,0,0), AutomaticSize=Enum.AutomaticSize.Y,
-		Position=UDim2.fromScale(0.5,0.5), AnchorPoint=Vector2.new(0.5,0.5),
-		ZIndex=201,
-	}, backdrop)
-	rnd(card, 12)
-	brd(card, "borderHi", 1)
-	registerThemeUpdater(function() card.BackgroundColor3 = K.bg end, card)
-	pad(card, 20, 20, 20, 20)
-	inst("UIListLayout",{
-		FillDirection=Enum.FillDirection.Vertical,
-		SortOrder=Enum.SortOrder.LayoutOrder,
-		Padding=UDim.new(0,12),
-	}, card)
-	local cardScale = inst("UIScale",{Scale=0.9}, card)
-
-	local hdr = inst("Frame",{
-		Name="Hdr", BackgroundTransparency=1,
-		Size=UDim2.new(1,0,0,40), LayoutOrder=1, ZIndex=202,
-	}, card)
-	local iconBg = frame(hdr,{
-		name="IB", colorKey="raised",
-		size=UDim2.new(0,40,0,40),
-		pos=UDim2.new(0,0,0.5,0), anchor=Vector2.new(0,0.5), z=203,
-	})
-	rnd(iconBg, 10)
-	if scriptData.iconId ~= "" then
-		local imgL = inst("ImageLabel",{
-			Size=UDim2.fromScale(1,1), BackgroundTransparency=1,
-			Image="rbxthumb://type=Asset&id="..scriptData.iconId.."&w=150&h=150",
-			ScaleType=Enum.ScaleType.Crop, ZIndex=204,
-		}, iconBg)
-		rnd(imgL, 10)
-	else
-		inst("TextLabel",{
-			Size=UDim2.fromScale(1,1), BackgroundTransparency=1,
-			Text="🎮", TextSize=18, Font=Enum.Font.Gotham,
-			TextXAlignment=Enum.TextXAlignment.Center,
-			TextYAlignment=Enum.TextYAlignment.Center, ZIndex=204,
-		}, iconBg)
-	end
-	lbl(hdr,{
-		text=scriptData.name, font=Enum.Font.GothamBold, size=16, colorKey="text",
-		sz=UDim2.new(1,-52,0,20), pos=UDim2.new(0,50,0,0), z=203,
-	})
-	lbl(hdr,{
-		text=scriptData.type, font=Enum.Font.GothamMedium, size=12, colorKey="muted",
-		sz=UDim2.new(1,-52,0,16), pos=UDim2.new(0,50,0,22), z=203,
-	})
-
-	local function dismiss()
-		if not activeModal then return end
-		activeModal = nil
-		local t = tw(card,{GroupTransparency=1},0.14,Enum.EasingStyle.Quint)
-		t:Play()
-		tw(cardScale,{Scale=0.9},0.14):Play()
-		t.Completed:Connect(function() backdrop:Destroy() end)
-	end
-	backdrop.MouseButton1Click:Connect(dismiss)
-
-	local actions = inst("Frame",{
-		Name="Actions", BackgroundTransparency=1,
-		Size=UDim2.new(1,0,0,0), AutomaticSize=Enum.AutomaticSize.Y,
-		LayoutOrder=2, ZIndex=202,
-	}, card)
-	inst("UIListLayout",{
-		FillDirection=Enum.FillDirection.Vertical,
-		SortOrder=Enum.SortOrder.LayoutOrder,
-		Padding=UDim.new(0,8),
-	}, actions)
-
-	local function mkBtn(text, primary, lo, cb)
-		local b = btn(actions,{
-			name="B"..lo, text=text, font=Enum.Font.GothamBold, size=13,
-			colorKey=primary and "white" or "raised",
-			tcKey=primary and "black" or "text",
-			sz=UDim2.new(1,0,0,36), z=203,
-		})
-		b.LayoutOrder = lo
-		rnd(b, 8)
-		if primary then
-			b.MouseEnter:Connect(function() tw(b,{BackgroundColor3=shade(K.white,0.85)},0.1):Play() end)
-			b.MouseLeave:Connect(function() tw(b,{BackgroundColor3=K.white},0.1):Play() end)
-		else
-			b.MouseEnter:Connect(function() tw(b,{BackgroundColor3=K.border},0.1):Play() end)
-			b.MouseLeave:Connect(function() tw(b,{BackgroundColor3=K.raised},0.1):Play() end)
-		end
-		b.MouseButton1Click:Connect(function() dismiss(); if cb then pcall(cb) end end)
-		return b
-	end
-
-	local desc = lbl(actions,{
-		text="", font=Enum.Font.Gotham, size=12, colorKey="sub", wrap=true,
-		sz=UDim2.new(1,0,0,0), z=202, ya=Enum.TextYAlignment.Top,
-	})
-	desc.LayoutOrder = 0
-	desc.AutomaticSize = Enum.AutomaticSize.Y
-
-	if isLocked then
-		desc.Text = "This script requires a Premium account. Login with your key to access it."
-		mkBtn("Login with Key", true, 1, function()
-			if callbacks and callbacks.onRequestLogin then callbacks.onRequestLogin() end
-		end)
-		mkBtn("Cancel", false, 2)
-	elseif isPurchased then
-		desc.Text = "You have access. Enter your key to execute."
-		local tb = makeTextBox(actions, "Script key…", "")
-		tb.frame.Size = UDim2.new(1,0,0,34)
-		tb.frame.LayoutOrder = 1
-		tb.frame.ZIndex = 203
-		mkBtn("Execute", true, 2, function()
-			if callbacks and callbacks.onCheckKey then
-				callbacks.onCheckKey(scriptData.id, tb.getText())
-			end
-		end)
-		mkBtn("Cancel", false, 3)
-	else
-		desc.Text = "Get your free key from our website, then paste it below."
-		local tb = makeTextBox(actions, "Paste key here…", "")
-		tb.frame.Size = UDim2.new(1,0,0,34)
-		tb.frame.LayoutOrder = 1
-		tb.frame.ZIndex = 203
-		mkBtn("Get Key →", false, 2, function()
-			if callbacks and callbacks.onGetKey then callbacks.onGetKey(scriptData) end
-		end)
-		mkBtn("Execute", true, 3, function()
-			if callbacks and callbacks.onCheckKey then
-				callbacks.onCheckKey(scriptData.id, tb.getText())
-			end
-		end)
-		mkBtn("Cancel", false, 4)
-	end
-
-	tw(card,{GroupTransparency=0},0.18,Enum.EasingStyle.Quint):Play()
-	tw(cardScale,{Scale=1},0.22,Enum.EasingStyle.Back):Play()
-end
-
--- ── Login gate ──────────────────────────────────────────────────────────────
-
-local function showLoginGate(sg, onLogin, onGuest)
-	local backdrop = inst("TextButton",{
-		Name="LoginBd", BackgroundColor3=Color3.new(0,0,0),
-		BackgroundTransparency=0.55, Text="", AutoButtonColor=false,
-		Size=UDim2.fromScale(1,1), ZIndex=200,
-	}, sg)
-
-	local card = inst("CanvasGroup",{
-		Name="LoginCard", BackgroundColor3=K.bg, GroupTransparency=1,
-		Size=UDim2.new(0,320,0,0), AutomaticSize=Enum.AutomaticSize.Y,
-		Position=UDim2.fromScale(0.5,0.5), AnchorPoint=Vector2.new(0.5,0.5),
-		ZIndex=201,
-	}, backdrop)
-	rnd(card, 12)
-	brd(card, "borderHi", 1)
-	registerThemeUpdater(function() card.BackgroundColor3 = K.bg end, card)
-	pad(card, 22, 22, 22, 22)
-	inst("UIListLayout",{
-		FillDirection=Enum.FillDirection.Vertical,
-		SortOrder=Enum.SortOrder.LayoutOrder,
-		Padding=UDim.new(0,14),
-	}, card)
-	local cardScale = inst("UIScale",{Scale=0.9}, card)
-
-	local tl = lbl(card,{
-		text="Toasty Hub", font=Enum.Font.GothamBold, size=18, colorKey="white",
-		sz=UDim2.new(1,0,0,22), z=202, xa=Enum.TextXAlignment.Center,
-	})
-	tl.LayoutOrder = 1
-
-	local sl = lbl(card,{
-		text="Enter your account key, or continue as guest",
-		font=Enum.Font.Gotham, size=12, colorKey="sub", wrap=true,
-		sz=UDim2.new(1,0,0,0), z=202, xa=Enum.TextXAlignment.Center,
-	})
-	sl.LayoutOrder = 2
-	sl.AutomaticSize = Enum.AutomaticSize.Y
-
-	local tb = makeTextBox(card, "Account key (6–8 chars)…", "")
-	tb.frame.Size = UDim2.new(1,0,0,36)
-	tb.frame.LayoutOrder = 3
-	tb.frame.ZIndex = 202
-
-	local contBtn = btn(card,{
-		name="Cont", text="Continue", font=Enum.Font.GothamBold, size=13,
-		colorKey="white", tcKey="black",
-		sz=UDim2.new(1,0,0,36), z=202,
-	})
-	contBtn.LayoutOrder = 4
-	rnd(contBtn, 8)
-	contBtn.MouseEnter:Connect(function() tw(contBtn,{BackgroundColor3=shade(K.white,0.85)},0.1):Play() end)
-	contBtn.MouseLeave:Connect(function() tw(contBtn,{BackgroundColor3=K.white},0.1):Play() end)
-	contBtn.MouseButton1Click:Connect(function()
-		local key = tb.getText()
-		if #key < 6 or #key > 8 then return end
-		backdrop:Destroy()
-		if onLogin then pcall(onLogin, key) end
-	end)
-
-	local guestBtn = btn(card,{
-		name="Guest", text="Continue as Guest →", font=Enum.Font.Gotham, size=12,
-		colorKey="bg", tcKey="muted",
-		sz=UDim2.new(1,0,0,20), z=202,
-	})
-	guestBtn.LayoutOrder = 5
-	guestBtn.MouseEnter:Connect(function() tw(guestBtn,{TextColor3=K.sub},0.1):Play() end)
-	guestBtn.MouseLeave:Connect(function() tw(guestBtn,{TextColor3=K.muted},0.1):Play() end)
-	guestBtn.MouseButton1Click:Connect(function()
-		backdrop:Destroy()
-		if onGuest then pcall(onGuest) end
-	end)
-
-	tw(card,{GroupTransparency=0},0.2,Enum.EasingStyle.Quint):Play()
-	tw(cardScale,{Scale=1},0.26,Enum.EasingStyle.Back):Play()
-end
-
--- ── Window ──────────────────────────────────────────────────────────────────
-
-local hubWindow = VantixUI:CreateWindow({
-	Title = "Toasty Hub",
-	Theme = "Vantix",
-})
-
-local hubSg = hubWindow:GetGui()
-
--- Scripts tab
-local scriptsTab   = hubWindow:AddTab("Scripts", "layers")
-local scriptsScroll = scriptsTab:GetScroll()
-
-for _, c in ipairs(scriptsScroll:GetChildren()) do
-	if c:IsA("UIListLayout") or c:IsA("UIPadding") then c:Destroy() end
-end
-inst("UIGridLayout",{
-	CellSize=UDim2.new(0,CARD_W,0,CARD_H),
-	CellPadding=UDim2.new(0,12,0,12),
-	SortOrder=Enum.SortOrder.LayoutOrder,
-	HorizontalAlignment=Enum.HorizontalAlignment.Center,
-}, scriptsScroll)
-pad(scriptsScroll, 16, 16, 16, 16)
-
-local function rebuildScriptGrid()
-	for _, c in ipairs(scriptsScroll:GetChildren()) do
-		if c:IsA("TextButton") then c:Destroy() end
-	end
-	for i, sd in ipairs(SCRIPTS) do
-		local card = makeScriptCard(scriptsScroll, sd, hubUser, function(scriptData)
-			openScriptModal(hubSg, scriptData, hubUser, {
-				onCheckKey = function(scriptId, key)
-					hubWindow:Notify({
-						Title=scriptData.name, Text="Checking key…",
-						Icon="key", Duration=2,
-					})
-					-- TODO: verify key against backend
-				end,
-				onGetKey = function(sd)
-					if sd.link and sd.link ~= "" then
-						pcall(function() setclipboard(sd.link) end)
-						pcall(function() toclipboard(sd.link) end)
-						hubWindow:Notify({
-							Title="Link copied",
-							Text="Paste it in your browser to get your key",
-							Icon="link", Duration=4,
-						})
-					end
-				end,
-				onRequestLogin = function()
-					showLoginGate(hubSg,
-						function(key)
-							-- TODO: validate key against backend
-							hubUser.loggedIn  = true
-							hubUser.username  = "User"
-							hubUser.purchased = {}
-							rebuildScriptGrid()
-							hubWindow:Notify({Title="Logged in", Text="Welcome back!", Icon="check", Duration=3})
-						end,
-						function()
-							hubWindow:Notify({Title="Guest Mode", Text="Some scripts require login", Icon="info", Duration=3})
-						end
-					)
-				end,
-			})
-		end)
-		card.LayoutOrder = i
-	end
-end
-
-rebuildScriptGrid()
-
--- Settings tab
-local settingsTab = hubWindow:AddTab("Settings", "settings")
-
-local themeList = {}
-for k in pairs(THEMES) do themeList[#themeList+1] = k end
-table.sort(themeList)
-
-settingsTab:AddLabel("Appearance")
-settingsTab:AddDropdown({
-	Title="Theme", Icon="palette",
-	Options=themeList, Default="Vantix",
-	Callback=function(v) hubWindow:SetTheme(v) end,
-})
-
-settingsTab:AddSeparator()
-settingsTab:AddLabel("Account")
-settingsTab:AddButton({
-	Title="Logout", Subtitle="Return to guest mode",
-	Icon="log-out", Text="Logout",
-	Callback=function()
-		hubUser.loggedIn  = false
-		hubUser.username  = nil
-		hubUser.purchased = {}
-		rebuildScriptGrid()
-		hubWindow:Notify({Title="Logged out", Text="Now in guest mode", Icon="info", Duration=3})
-	end,
-})
-
-settingsTab:AddSeparator()
-settingsTab:AddLabel("Window")
-settingsTab:AddButton({
-	Title="Unload", Subtitle="Destroys the GUI",
-	Icon="x", Text="Unload",
-	Callback=function() hubWindow:Destroy() end,
-})
-
-settingsTab:AddSeparator()
-settingsTab:AddLabel("Toasty Hub  ·  v2.0")
-
--- Show login gate after the reveal animation
-task.delay(2.6, function()
-	showLoginGate(hubSg,
-		function(key)
-			-- TODO: validate key against your backend API
-			hubUser.loggedIn  = true
-			hubUser.username  = "User"
-			hubUser.purchased = {}
-			rebuildScriptGrid()
-			hubWindow:Notify({Title="Welcome", Text="Logged in successfully", Icon="check", Duration=4})
-		end,
-		function()
-			hubWindow:Notify({Title="Guest Mode", Text="Some scripts require an account", Icon="info", Duration=3})
-		end
-	)
-end)
-
-hubWindow:Notify({
-	Title="Toasty Hub",
-	Text="Loaded — "..#SCRIPTS.." scripts available",
-	Icon="check",
-	Duration=4,
-})
+return VantixUI
