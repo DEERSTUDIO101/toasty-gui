@@ -10,8 +10,8 @@ local ScriptsTab = Window:AddTab("Scripts", "layers")
 local SettingsTab = Window:AddTab("Settings", "settings")
 local grid = ScriptsTab:AddScriptGrid({
     scripts = {
-        { id="blox-fruits", name="Blox Fruits", type="Premium", universeId="1329557602", placeId="2753915549", link="" },
-        { id="pet-sim-x",   name="Pet Sim X",   type="Ad",      universeId="1298332420", placeId="6284583030", link="https://toastyhub.com/key/pet-sim-x" },
+        { id="blox-fruits", name="Blox Fruits", type="Premium", universeId="994732206",  placeId="2753915549", link="" },
+        { id="pet-sim-x",   name="Pet Sim X",   type="Ad",      universeId="2316994223", placeId="6284583030", link="https://toastyhub.com/key/pet-sim-x" },
     },
     user  = user,
     onOpen = function(scriptData, u)
