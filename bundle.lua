@@ -26,7 +26,9 @@ local function isMobile()
 	return UIS.TouchEnabled and not UIS.MouseEnabled or vp.X < 600
 end
 
-local LOGO_ASSET = ""
+local LOGO_ASSET  = "109114089812696"  -- colored logo (sidebar)
+local LOGO_LOAD_W = "131578295720689"  -- white icon (dark-theme splash)
+local LOGO_LOAD_B = "72362432446770"   -- black icon (light-theme splash)
 local function assetImage(id)
 	id = tostring(id)
 	if getcustomasset then
@@ -1970,25 +1972,13 @@ function VantixUI:CreateWindow(config)
 
 	local logoImg = inst("ImageLabel",{
 		Name="LogoMark", BackgroundTransparency=1,
-		Image=assetImage(LOGO), ImageTransparency=1,
-		ImageColor3=K.logoTop, ScaleType=Enum.ScaleType.Fit,
+		Image=assetImage(LOGO_LOAD_W), ImageTransparency=1,
+		ImageColor3=Color3.new(1,1,1), ScaleType=Enum.ScaleType.Fit,
 		Size=UDim2.fromScale(0.8,0.8),
 		Position=UDim2.fromScale(0.5,0.5), AnchorPoint=Vector2.new(0.5,0.5),
 		ZIndex=32,
 	}, logoWrap)
 	local logoScale = inst("UIScale", {Scale=0.72}, logoImg)
-	local logoGrad = inst("UIGradient",{Rotation=90,Color=ColorSequence.new({
-		ColorSequenceKeypoint.new(0,   K.logoTop),
-		ColorSequenceKeypoint.new(0.45,K.logoMid),
-		ColorSequenceKeypoint.new(1,   K.logoBot),
-	})}, logoImg)
-	registerThemeUpdater(function()
-		logoGrad.Color = ColorSequence.new({
-			ColorSequenceKeypoint.new(0,   K.logoTop),
-			ColorSequenceKeypoint.new(0.45,K.logoMid),
-			ColorSequenceKeypoint.new(1,   K.logoBot),
-		})
-	end, logoGrad)
 
 	local loadSub=lbl(loadLayer,{
 		text=string.upper(TITLE),font=Enum.Font.Gotham,
@@ -2371,7 +2361,7 @@ function VantixUI:CreateWindow(config)
 			size=UDim2.new(0,1,1,0),pos=UDim2.new(0,SIDE_W-1,0,0),z=15,
 		})
 		
-		local LOGO_H   = 52
+		local LOGO_H   = 56
 		local profileH = 64
 
 		-- ── Sidebar logo header ──
@@ -2383,9 +2373,18 @@ function VantixUI:CreateWindow(config)
 			name="Sep", colorKey="border",
 			size=UDim2.new(1,-12,0,1), pos=UDim2.new(0,6,1,-1), z=7,
 		})
+		-- small logo icon left side
+		inst("ImageLabel", {
+			Name="SideLogoImg", BackgroundTransparency=1,
+			Image=assetImage(LOGO_ASSET),
+			ImageColor3=Color3.new(1,1,1), ScaleType=Enum.ScaleType.Fit,
+			Size=UDim2.new(0,34,0,34),
+			Position=UDim2.new(0,8,0.5,0), AnchorPoint=Vector2.new(0,0.5),
+			ZIndex=7,
+		}, sideLogoRow)
 		local sideTitleLbl = lbl(sideLogoRow, {
 			text=TITLE, font=Enum.Font.GothamBold, size=13, colorKey="white",
-			sz=UDim2.new(1,-16,0,16), pos=UDim2.new(0,10,0,10), z=7,
+			sz=UDim2.new(1,-52,0,16), pos=UDim2.new(0,48,0,10), z=7,
 		})
 		local sideTitleGrad = inst("UIGradient", {
 			Rotation=0,
@@ -2402,7 +2401,7 @@ function VantixUI:CreateWindow(config)
 		end, sideTitleGrad)
 		lbl(sideLogoRow, {
 			text="Script Hub", font=Enum.Font.Gotham, size=10, colorKey="muted",
-			sz=UDim2.new(1,-16,0,12), pos=UDim2.new(0,10,0,28), z=7,
+			sz=UDim2.new(1,-52,0,12), pos=UDim2.new(0,48,0,30), z=7,
 		})
 
 		-- ── Sidebar login/profile area (bottom) ──
