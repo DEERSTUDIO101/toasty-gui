@@ -2363,7 +2363,7 @@ function VantixUI:CreateWindow(config)
 	if true then -- always create sidebar (desktop + mobile)
 		sidebar = frame(body,{
 			name="Sidebar", colorKey="bg", trans=1,
-			size=UDim2.new(0,SIDE_W,1,0), z=5,
+			size=UDim2.new(0,SIDE_W,1,0), z=5, clip=true,
 		})
 		rnd(sidebar, 10)
 		frame(win,{
