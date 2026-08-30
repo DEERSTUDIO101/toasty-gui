@@ -13,7 +13,7 @@ local loginSection  -- forward ref so grid callbacks can refresh it
 
 local grid = ScriptsTab:AddScriptGrid({
     scripts = {
-        { id="blox-fruits", name="Blox Fruits", type="Premium", universeId="994732206",  placeId="2753915549", link="" },
+        { id="blox-fruits", name="Blox Fruits", type="Premium", universeId="994732206",  placeId="2753915549", link="", buyLink="" },
         { id="pet-sim-x",   name="Pet Sim X",   type="Ad",      universeId="2316994223", placeId="6284583030", link="" },
     },
     user  = user,
@@ -26,6 +26,12 @@ local grid = ScriptsTab:AddScriptGrid({
                 if sd.link ~= "" then
                     pcall(function() setclipboard(sd.link) end)
                     Window:Notify({ Title="Link kopiert", Icon="link", Duration=3 })
+                end
+            end,
+            onBuyKey = function(sd)
+                if sd.buyLink and sd.buyLink ~= "" then
+                    pcall(function() setclipboard(sd.buyLink) end)
+                    Window:Notify({ Title="Link kopiert!", Body="In Browser einfügen um Key zu kaufen.", Icon="link", Duration=4 })
                 end
             end,
             onRequestLogin = function()

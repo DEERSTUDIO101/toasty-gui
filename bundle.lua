@@ -1656,7 +1656,18 @@ local function openScriptModal(sg, scriptData, user, callbacks)
 		mkBtn("Login with Key", true, 1, function()
 			if callbacks and callbacks.onRequestLogin then callbacks.onRequestLogin() end
 		end)
-		mkBtn("Cancel", false, 2)
+		if scriptData.buyLink and scriptData.buyLink ~= "" then
+			mkBtn("Buy Key →", false, 2, function()
+				if callbacks and callbacks.onBuyKey then
+					callbacks.onBuyKey(scriptData)
+				else
+					pcall(function() setclipboard(scriptData.buyLink) end)
+				end
+			end)
+			mkBtn("Cancel", false, 3)
+		else
+			mkBtn("Cancel", false, 2)
+		end
 	elseif isPurchased then
 		desc.Text = "You have access. Enter your key to execute."
 		local tb = makeTextBox(actions, "Script key…", "")
