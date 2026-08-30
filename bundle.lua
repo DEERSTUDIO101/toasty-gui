@@ -2370,12 +2370,56 @@ function VantixUI:CreateWindow(config)
 			size=UDim2.new(0,1,1,0),pos=UDim2.new(0,SIDE_W-1,0,0),z=15,
 		})
 		
-		local profileH = 0
+		local LOGO_H   = 52
+		local profileH = 64
+
+		-- ── Sidebar logo header ──
+		local sideLogoRow = frame(sidebar, {
+			name="SideLogoRow", colorKey="bg",
+			size=UDim2.new(1,0,0,LOGO_H), z=6,
+		})
+		frame(sideLogoRow, {
+			name="Sep", colorKey="border",
+			size=UDim2.new(1,-12,0,1), pos=UDim2.new(0,6,1,-1), z=7,
+		})
+		local sideTitleLbl = lbl(sideLogoRow, {
+			text=TITLE, font=Enum.Font.GothamBold, size=13, colorKey="white",
+			sz=UDim2.new(1,-16,0,16), pos=UDim2.new(0,10,0,10), z=7,
+		})
+		local sideTitleGrad = inst("UIGradient", {
+			Rotation=0,
+			Color=ColorSequence.new({
+				ColorSequenceKeypoint.new(0, K.logoTop),
+				ColorSequenceKeypoint.new(1, K.logoBot),
+			}),
+		}, sideTitleLbl)
+		registerThemeUpdater(function()
+			sideTitleGrad.Color = ColorSequence.new({
+				ColorSequenceKeypoint.new(0, K.logoTop),
+				ColorSequenceKeypoint.new(1, K.logoBot),
+			})
+		end, sideTitleGrad)
+		lbl(sideLogoRow, {
+			text="Script Hub", font=Enum.Font.Gotham, size=10, colorKey="muted",
+			sz=UDim2.new(1,-16,0,12), pos=UDim2.new(0,10,0,28), z=7,
+		})
+
+		-- ── Sidebar login/profile area (bottom) ──
+		local profileFrame = frame(sidebar, {
+			name="ProfileArea", colorKey="bg",
+			size=UDim2.new(1,0,0,profileH),
+			pos=UDim2.new(0,0,1,0), anchor=Vector2.new(0,1),
+			z=6,
+		})
+		frame(profileFrame, {
+			name="Sep", colorKey="border",
+			size=UDim2.new(1,-12,0,1), z=7,
+		})
 
 		sidebarScroll = inst("ScrollingFrame", {
-			Name="SidebarScroll", Size=UDim2.new(1,0,1,-profileH), Position=UDim2.new(0,0,0,0),
+			Name="SidebarScroll", Size=UDim2.new(1,0,1,-(LOGO_H+profileH)), Position=UDim2.new(0,0,0,LOGO_H),
 			BackgroundTransparency=1, BorderSizePixel=0,
-			ScrollBarThickness=0, -- Hidden scrollbar for cleaner UI
+			ScrollBarThickness=0,
 			ScrollingDirection=Enum.ScrollingDirection.Y,
 			CanvasSize=UDim2.new(0,0,0,0),
 			AutomaticCanvasSize=Enum.AutomaticSize.Y,
@@ -3890,6 +3934,98 @@ function VantixUI:CreateWindow(config)
 
 	function Window:ShowLoginGate(onLogin, onGuest)
 		showLoginGate(sg, onLogin, onGuest)
+	end
+
+	function Window:AddLoginButton(opts)
+		opts = opts or {}
+		local user         = opts.user or { loggedIn=false, username=nil }
+		local onLoginClick = opts.onLoginClick
+
+		-- clear old content (keep separator)
+		for _, c in ipairs(profileFrame:GetChildren()) do
+			if c.Name ~= "Sep" then c:Destroy() end
+		end
+
+		-- ── Logged-in state: avatar + username + discord ──
+		local loggedInArea = frame(profileFrame, {
+			name="LoggedIn", colorKey="bg", trans=1,
+			size=UDim2.new(1,-12,1,-2), pos=UDim2.new(0,6,0,2), z=7,
+		})
+		loggedInArea.Visible = false
+
+		local AVA = 32
+		local avaWrap = frame(loggedInArea, {
+			name="AvaWrap", colorKey="raised",
+			size=UDim2.new(0,AVA,0,AVA),
+			pos=UDim2.new(0,0,0.5,0), anchor=Vector2.new(0,0.5), z=8,
+		})
+		rnd(avaWrap, 99)
+		local avaImg = inst("ImageLabel", {
+			Name="Ava", BackgroundTransparency=1,
+			Image="", ScaleType=Enum.ScaleType.Crop,
+			Size=UDim2.fromScale(1,1), ZIndex=9,
+		}, avaWrap)
+		rnd(avaImg, 99)
+
+		local userLbl = lbl(loggedInArea, {
+			text="", font=Enum.Font.GothamMedium, size=12, colorKey="text",
+			sz=UDim2.new(1,-(AVA+8),0,15),
+			pos=UDim2.new(0,AVA+8,0,7), z=8,
+		})
+		userLbl.TextTruncate = Enum.TextTruncate.AtEnd
+
+		local discordLbl = lbl(loggedInArea, {
+			text="", font=Enum.Font.Gotham, size=10, colorKey="muted",
+			sz=UDim2.new(1,-(AVA+8),0,13),
+			pos=UDim2.new(0,AVA+8,0,23), z=8,
+		})
+		discordLbl.TextTruncate = Enum.TextTruncate.AtEnd
+
+		-- ── Not-logged-in state: Login button ──
+		local loginBtn = btn(profileFrame, {
+			name="LoginBtn", colorKey="raised", tcKey="sub",
+			text="", font=Enum.Font.GothamMedium, size=12,
+			sz=UDim2.new(1,-12,0,40),
+			pos=UDim2.new(0,6,0.5,0), anchor=Vector2.new(0,0.5), z=7,
+		})
+		rnd(loginBtn, 8)
+		brd(loginBtn, "border", 1)
+		if lucide then
+			img(loginBtn, {
+				name="Icon", img=getLucide("log-in", 14),
+				colorKey="sub", sz=UDim2.new(0,14,0,14),
+				pos=UDim2.new(0,10,0.5,0), anchor=Vector2.new(0,0.5), z=9,
+			})
+		end
+		lbl(loginBtn, {
+			text="Login", font=Enum.Font.GothamMedium, size=12, colorKey="sub",
+			sz=UDim2.new(1,-34,1,0), pos=UDim2.new(0,30,0,0), z=9,
+			xa=Enum.TextXAlignment.Left,
+		})
+		loginBtn.MouseEnter:Connect(function() tw(loginBtn,{BackgroundColor3=K.border},0.1):Play() end)
+		loginBtn.MouseLeave:Connect(function() tw(loginBtn,{BackgroundColor3=K.raised},0.1):Play() end)
+		loginBtn.MouseButton1Click:Connect(function()
+			if onLoginClick then pcall(onLoginClick) end
+		end)
+
+		local function refresh()
+			if user.loggedIn then
+				loginBtn.Visible = false
+				loggedInArea.Visible = true
+				local ok, uid = pcall(function() return game.Players.LocalPlayer.UserId end)
+				if ok and uid then
+					avaImg.Image = "rbxthumb://type=AvatarHeadShot&id="..uid.."&w=150&h=150"
+				end
+				userLbl.Text  = user.username or (ok and game.Players.LocalPlayer.Name) or "User"
+				discordLbl.Text = user.discord and ("@"..user.discord) or ""
+			else
+				loginBtn.Visible = true
+				loggedInArea.Visible = false
+			end
+		end
+
+		refresh()
+		return { refresh = refresh }
 	end
 
 	function Window:OpenScriptModal(scriptData, user, callbacks)
