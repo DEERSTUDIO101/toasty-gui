@@ -2332,6 +2332,7 @@ function VantixUI:CreateWindow(config)
 
 	local sidebar
 	local sidebarScroll
+	local profileFrame
 	local navBtns = {}
 	local tabs = {}
 	local activePage = nil
@@ -2405,7 +2406,7 @@ function VantixUI:CreateWindow(config)
 		})
 
 		-- ── Sidebar login/profile area (bottom) ──
-		local profileFrame = frame(sidebar, {
+		profileFrame = frame(sidebar, {
 			name="ProfileArea", colorKey="bg",
 			size=UDim2.new(1,0,0,profileH),
 			pos=UDim2.new(0,0,1,0), anchor=Vector2.new(0,1),
